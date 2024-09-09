@@ -22,9 +22,15 @@ class DatasetPartitioner:
         if self.balance:
             class_indices = {}
             for i, target in enumerate(self.targets):
-                if target.item() not in class_indices:
-                    class_indices[target.item()] = []
-                class_indices[target.item()].append(i)
+                if isinstance(target, int):
+                    if target not in class_indices:
+                        class_indices[target] = []
+                    class_indices[target].append(i)
+                else:
+                    if target.item() not in class_indices:
+                        class_indices[target.item()] = []
+                    class_indices[target.item()].append(i)    
+            
             # Partition class-wise indices into clients
             partitions = [[] for _ in range(self.num_clients)]
             for class_idx in class_indices:
