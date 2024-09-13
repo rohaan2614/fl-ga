@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from metric import Metric
 from utils import set_flatten_model_back, accuracy
 from models.mnist_lenet import LeNet5
+from utils import get_flatten_model_param, get_flatten_model_grad
     
 class Agent:
     def __init__(self, *, model, optimizer, criterion, train_loader, device, scheduler= None):
@@ -21,6 +22,7 @@ class Agent:
         self.batch_idx = 0
         self.epoch = 0
         self.data_generator = self.get_one_train_batch()
+        self.model_grad = torch.zeros_like(get_flatten_model_param(self.model))
 
     # lazy loading
     def get_one_train_batch(self):
@@ -52,6 +54,7 @@ class Agent:
 
     def train_k_step_fedavg(self, k: int):
         self.model.train()
+        self.model_grad = torch.zeros_like(get_flatten_model_param(self.model))
         for i in range(k):
             try:
                 batch_idx, (inputs, targets) = next(self.data_generator)
@@ -64,6 +67,7 @@ class Agent:
             outputs = self.model(inputs)
             loss = self.criterion(outputs, targets)
             loss.backward()
+            self.model_grad += get_flatten_model_grad(self.model)
             self.optimizer.step()
             self.train_loss.update(loss.item())
             self.train_accuracy.update(accuracy(outputs, targets).item())

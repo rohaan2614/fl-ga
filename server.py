@@ -21,7 +21,7 @@ from utils import (set_flatten_model_back,
 
 
 class Server:
-    def __init__(self, *, model, criterion, device):
+    def __init__(self, *, model, criterion, device, lr=0.01):
         self.model = model.to(device)
         self.flatten_params = get_flatten_model_param(self.model).to(device)
         self.criterion = criterion
@@ -29,14 +29,21 @@ class Server:
         self.num_arb_participation = 0
         self.num_uni_participation = 0
         self.momentum = self.flatten_params.clone().zero_()
+        self.lr = lr
         print('Using', device)
 
+    # def avg_clients(self, clients: list[Agent]):
+    #     self.flatten_params.zero_()
+    #     for client in clients:
+    #         self.flatten_params += get_flatten_model_param(
+    #             client.model).to(self.device)
+    #     self.flatten_params.div_(len(clients))
+    #     set_flatten_model_back(self.model, self.flatten_params)
+
     def avg_clients(self, clients: list[Agent]):
-        self.flatten_params.zero_()
         for client in clients:
-            self.flatten_params += get_flatten_model_param(
-                client.model).to(self.device)
-        self.flatten_params.div_(len(clients))
+            self.flatten_params -= get_flatten_model_param(
+                client.model).to(self.device).mul_(self.lr / len(clients))
         set_flatten_model_back(self.model, self.flatten_params)
 
     def eval(self, test_dataloader) -> tuple[float, float]:
@@ -77,6 +84,7 @@ def local_update_fedavg(clients: list[Agent], server, local_steps):
         train_loss_sum += train_loss
         train_acc_sum += train_acc
     return train_loss_sum / len(clients), train_acc_sum / len(clients)
+
 
 if __name__ == '__main__':
     # set up
@@ -132,7 +140,7 @@ if __name__ == '__main__':
                        train_loader=train_loader,
                        device=device)
         clients.append(client)
-    
+
         print('OK')
 
     # Initialize the server
@@ -159,11 +167,12 @@ if __name__ == '__main__':
 
         # Broadcast
         server.avg_clients(clients)
-        
+
         # Evaluate
         if rnd % evaluation_interval == 0:
             eval_loss, eval_acc = server.eval(test_loader)
-            print(f'Round: {rnd}/{rounds}, Accuracy: {eval_acc}, Loss: {eval_loss}')
+            print(
+                f'Round: {rnd}/{rounds}, Accuracy: {eval_acc}, Loss: {eval_loss}')
             loss.append(eval_loss)
             accuracies.append(eval_acc)
             rounds_list.append(rnd)
@@ -172,14 +181,12 @@ if __name__ == '__main__':
     print(f'{len(rounds_list)}\n\t-> Loss: ', end='', flush=True)
     print(f'{len(loss)}\n\t-> Accuracy: ', end='', flush=True)
     print(len(accuracies))
-    
-    
-            
+
     df = pd.DataFrame(data={
-        'Round' : rounds_list,
-        'Test Loss' : loss,
-        'Accuracy' : accuracies 
+        'Round': rounds_list,
+        'Test Loss': loss,
+        'Accuracy': accuracies
     })
-    
-    df.to_csv(f'server_results_{rounds}_rounds_{num_clients}_clients.csv', 
+
+    df.to_csv(f'server_results_{rounds}_rounds_{num_clients}_clients.csv',
               index=False)

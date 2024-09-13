@@ -29,3 +29,17 @@ def local_update_fedavg(clients: list, server, local_steps):
         train_loss_sum += train_loss
         train_acc_sum += train_acc
     return train_loss_sum / len(clients), train_acc_sum / len(clients)
+
+def local_train_1_step(clients: list):
+    train_loss_sum, train_acc_sum = 0, 0
+    for client in clients:
+        train_loss, train_acc = client.train_k_step_fedavg(k=1)
+        train_loss_sum += train_loss
+        train_acc_sum += train_acc
+    return train_loss_sum / len(clients), train_acc_sum / len(clients)
+
+def get_flatten_model_grad(model) -> torch.Tensor:
+    with torch.no_grad():
+        return torch.cat(
+            [p.grad.detach().view(-1) for p in model.parameters() if p.requires_grad]
+        )
