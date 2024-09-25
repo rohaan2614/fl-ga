@@ -11,14 +11,13 @@ from torch.utils.data import Subset, DataLoader
 from torch.optim import SGD
 from tqdm import tqdm
 
-from metric import Metric
 from agent import Agent
 from dataset_partitioner import DatasetPartitioner
 from server import Server
-from models.cifar10_cnn import CNN
-from utils import (set_flatten_model_back,
-                   get_flatten_model_param,
-                   local_update_fedavg, accuracy)
+# from models.cifar10_cnn import CNN
+from models.cifar10_deep_cnn import DeepConvModel as CNN
+
+from utils import (local_update_fedavg)
 
 if __name__ == '__main__':
     model_name = 'cifar10'
@@ -31,9 +30,10 @@ if __name__ == '__main__':
     model = CNN()
     criterion = CrossEntropyLoss()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    num_clients = 2
-    batch_size = 128
-    rounds = 1000
+    num_clients = 2 * 5
+    batch_size = 128 * 4
+    batch_size = int(batch_size)
+    rounds = 1000 * 10
     lr = 0.01
     local_steps = 1
     evaluation_interval = 10
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     })
     
      # Generate CSV filename with optional job_id
-    csv_filename = f'{model_name}_{rounds}_rounds_{num_clients}_clients'
+    csv_filename = f'{model_name}_{batch_size}_{rounds}_rounds_{num_clients}_clients'
     if args.job_id:
         csv_filename += f'_{args.job_id}'
     csv_filename += '.csv'
