@@ -34,7 +34,7 @@ if __name__ == '__main__':
     model = LeNet5()
     criterion = CrossEntropyLoss()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    num_clients = 5
+    num_clients = 10
     batch_size = 128
     rounds = 600
     lr = 0.01

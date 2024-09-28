@@ -31,18 +31,20 @@ if __name__ == '__main__':
     criterion = CrossEntropyLoss()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     num_clients = 2 * 5
-    batch_size = 128 * 4
-    batch_size = int(batch_size)
+    batch_size = 256
     rounds = 1000 * 10
-    lr = 0.01
+    lr = 0.1
     local_steps = 1
     evaluation_interval = 10
     rounds_list = [0]
+    momentum = 0.9
+    weight_decay = str(1e-1)
 
     # Load datasets
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
+        transforms.Normalize((0.4914, 0.4822, 0.4465), 
+                             (0.2023, 0.1994, 0.2010))])
     print("Load data sets...\n\t-> Train  ", end='', flush=True)
     
     train_dataset = datasets.CIFAR10(
@@ -71,7 +73,12 @@ if __name__ == '__main__':
 
         # client
         model = CNN()
-        optimizer = SGD(model.parameters(), lr=lr, momentum=0.9)
+        optimizer = SGD(model.parameters(), 
+                        lr=lr, 
+                        momentum=momentum,
+                        weight_decay=float(weight_decay),
+                        nesterov=True)
+        
         client = Agent(model=model,
                        optimizer=optimizer,
                        criterion=CrossEntropyLoss(),
@@ -113,7 +120,7 @@ if __name__ == '__main__':
     })
     
      # Generate CSV filename with optional job_id
-    csv_filename = f'{model_name}_{batch_size}_{rounds}_rounds_{num_clients}_clients'
+    csv_filename = f'{model_name}_{weight_decay}_{momentum}_{lr}_{batch_size}_{rounds}_rounds_{num_clients}_clients'
     if args.job_id:
         csv_filename += f'_{args.job_id}'
     csv_filename += '.csv'
